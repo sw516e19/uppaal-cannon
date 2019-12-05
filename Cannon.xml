@@ -2,7 +2,11 @@
 <!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
 <nta>
 	<declaration>// Place global declarations here.
-chan pic_send, pic_rcv;
+chan pic_send, pic_rcv, calc_send, calc_rcv, take_pic, projectile_arrive;
+
+int block_y_coord;
+
+clock systime;
 
 const double gravity_pixels := 0.002804285714285714;</declaration>
 	<template>
@@ -61,24 +65,24 @@ clock cannon_time;</declaration>
 		</location>
 		<location id="id3" x="-654" y="-170">
 			<name x="-705" y="-161">triggering</name>
-			<label kind="invariant" x="-705" y="-144">x &lt;= trigger_time</label>
+			<label kind="invariant" x="-705" y="-144">cannon_time &lt;= trigger_time</label>
 		</location>
 		<location id="id4" x="-501" y="-170">
 			<name x="-484" y="-178">reloading</name>
-			<label kind="invariant" x="-484" y="-153">x &lt;= rotation_time</label>
+			<label kind="invariant" x="-484" y="-153">cannon_time &lt;= rotation_time</label>
 		</location>
 		<init ref="id2"/>
 		<transition>
 			<source ref="id4"/>
 			<target ref="id2"/>
-			<label kind="guard" x="-688" y="-59">x &gt; rotation_time</label>
+			<label kind="guard" x="-688" y="-59">cannon_time &gt; rotation_time</label>
 			<nail x="-501" y="-68"/>
 			<nail x="-799" y="-68"/>
 		</transition>
 		<transition>
 			<source ref="id3"/>
 			<target ref="id4"/>
-			<label kind="guard" x="-636" y="-204">x &gt; trigger_time</label>
+			<label kind="guard" x="-636" y="-204">cannon_time &gt; trigger_time</label>
 		</transition>
 		<transition>
 			<source ref="id2"/>
@@ -88,88 +92,86 @@ clock cannon_time;</declaration>
 		</transition>
 	</template>
 	<template>
-		<name>PreemptScheduler</name>
-		<location id="id5" x="-127" y="-170">
-		</location>
-		<init ref="id5"/>
-	</template>
-	<template>
 		<name>Block</name>
-		<parameter>urgent chan &amp;update_position, urgent chan &amp;shot, int &amp;block</parameter>
-		<declaration>const int impact_position := 500;
+		<parameter>chan &amp;update_position, urgent chan &amp;shot, int &amp;block</parameter>
+		<declaration>const int impact_position := 318;
 
+int time_in_detection_area := -1;
 double starting_velocity;
 clock detect_time;
 
+
 int calculate_position(){
 
-    return (0 + starting_velocity * detect_time) + (0.5 * gravity_pixels * detect_time);
+    int now_time := 0;
+
+    return fint((0 + starting_velocity * now_time) + (0.5 * gravity_pixels * now_time));
 
 }</declaration>
-		<location id="id6" x="-289" y="-153">
+		<location id="id5" x="-289" y="-153">
 			<name x="-357" y="-187">missed</name>
 		</location>
-		<location id="id7" x="-204" y="-153">
+		<location id="id6" x="-204" y="-153">
 			<name x="-195" y="-187">hit</name>
 		</location>
-		<location id="id8" x="-289" y="-280">
+		<location id="id7" x="-289" y="-280">
 			<name x="-263" y="-314">wait_for_impact</name>
-			<label kind="invariant" x="-263" y="-297">( impact_position ) &lt; calculate_position()</label>
+			<label kind="invariant" x="-263" y="-297">( impact_position  + 14) &lt; calculate_position()</label>
 		</location>
-		<location id="id9" x="-289" y="-391">
+		<location id="id8" x="-289" y="-391">
 			<name x="-255" y="-409">detection_area</name>
-			<label kind="invariant" x="-255" y="-391">time_in_detect &gt; detect_time</label>
 		</location>
-		<location id="id10" x="-289" y="-535">
+		<location id="id9" x="-289" y="-535">
 			<name x="-255" y="-560">drop</name>
 		</location>
-		<init ref="id10"/>
+		<init ref="id9"/>
 		<transition>
-			<source ref="id8"/>
+			<source ref="id7"/>
+			<target ref="id5"/>
+			<label kind="guard" x="-620" y="-238">impact_position &gt; calculate_position()</label>
+		</transition>
+		<transition>
+			<source ref="id7"/>
 			<target ref="id6"/>
-			<label kind="guard" x="-569" y="-272">impact_position &gt; calculate_position()</label>
+			<label kind="synchronisation" x="-246" y="-238">shot?</label>
 		</transition>
 		<transition>
 			<source ref="id8"/>
 			<target ref="id7"/>
-			<label kind="synchronisation" x="-246" y="-238">shot?</label>
+			<label kind="guard" x="-280" y="-365">detect_time &gt; time_in_detection_area</label>
 		</transition>
 		<transition>
-			<source ref="id9"/>
+			<source ref="id8"/>
 			<target ref="id8"/>
-		</transition>
-		<transition>
-			<source ref="id9"/>
-			<target ref="id9"/>
-			<label kind="synchronisation" x="-595" y="-425">snap?</label>
+			<label kind="synchronisation" x="-595" y="-425">update_position?</label>
 			<label kind="assignment" x="-595" y="-408">block := calculate_position()</label>
 			<nail x="-408" y="-450"/>
 			<nail x="-408" y="-331"/>
 		</transition>
 		<transition>
-			<source ref="id10"/>
-			<target ref="id9"/>
-			<label kind="assignment" x="-255" y="-501">starting_velocity := Random(0, 2.0)
-time_in_detect := (207 / starting_velocity)
-detect_time := 0</label>
+			<source ref="id9"/>
+			<target ref="id8"/>
+			<label kind="assignment" x="-272" y="-501">starting_velocity := random( 2) ,
+detect_time := 0,
+time_in_detection_area := fint( 207 / starting_velocity)</label>
 		</transition>
 	</template>
 	<template>
 		<name>PixyCam</name>
-		<parameter>urgent chan &amp;snap</parameter>
+		<parameter>chan &amp;snap</parameter>
 		<declaration>
 clock interval;</declaration>
-		<location id="id11" x="-51" y="-119">
+		<location id="id10" x="-51" y="-119">
 			<name x="0" y="-144">active</name>
 			<label kind="invariant" x="0" y="-127">interval &lt;= 15</label>
 		</location>
-		<location id="id12" x="-51" y="-255">
+		<location id="id11" x="-51" y="-255">
 			<name x="-25" y="-263">begin</name>
 		</location>
-		<init ref="id12"/>
+		<init ref="id11"/>
 		<transition>
-			<source ref="id11"/>
-			<target ref="id11"/>
+			<source ref="id10"/>
+			<target ref="id10"/>
 			<label kind="guard" x="-272" y="-221">interval &gt; 15</label>
 			<label kind="synchronisation" x="-272" y="-204">snap!</label>
 			<label kind="assignment" x="-272" y="-187">interval := 0</label>
@@ -177,28 +179,48 @@ clock interval;</declaration>
 			<nail x="-178" y="-51"/>
 		</transition>
 		<transition>
-			<source ref="id12"/>
-			<target ref="id11"/>
+			<source ref="id11"/>
+			<target ref="id10"/>
 		</transition>
 	</template>
 	<template>
 		<name>DetectTask</name>
-		<parameter>chan &amp;send_pic, int &amp;block_location, int &amp;block_y</parameter>
-		<location id="id13" x="-1156" y="-144">
+		<parameter>chan &amp;resume, chan &amp;send_pic, int &amp;block_location, int &amp;block_y</parameter>
+		<location id="id12" x="-2482" y="-450">
+			<name x="-2456" y="-493">updating_block</name>
+			<label kind="invariant" x="-2456" y="-476">block_y == block_location</label>
 		</location>
-		<location id="id14" x="-1428" y="-144">
-			<name x="-1471" y="-178">begin</name>
+		<location id="id13" x="-2592" y="-340">
+			<name x="-2602" y="-374">ready</name>
+		</location>
+		<location id="id14" x="-2762" y="-340">
+			<name x="-2805" y="-374">begin</name>
 		</location>
 		<init ref="id14"/>
 		<transition>
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-2473" y="-374">block_y != block_location</label>
+			<label kind="synchronisation" x="-2473" y="-357">send_pic!</label>
+			<label kind="assignment" x="-2473" y="-340">block_y = block_location</label>
+			<nail x="-2483" y="-340"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id12"/>
+			<label kind="synchronisation" x="-2584" y="-433">resume?</label>
+		</transition>
+		<transition>
 			<source ref="id14"/>
 			<target ref="id13"/>
+			<label kind="assignment" x="-2728" y="-331">block_y := -1</label>
 		</transition>
 	</template>
 	<template>
 		<name>ShootTask</name>
-		<parameter>chan &amp;rcv_deadline, int &amp;new_deadline</parameter>
-		<declaration>int time_to_shoot := 0;</declaration>
+		<parameter>chan &amp;rcv_deadline, chan &amp;trigger, int &amp;new_deadline</parameter>
+		<declaration>int time_to_shoot := 0;
+int worst_detect_calc := 1;</declaration>
 		<location id="id15" x="-144" y="110">
 			<name x="-127" y="110">sleep_until_shoot</name>
 			<label kind="invariant" x="-127" y="127">time_to_shoot &gt; systime</label>
@@ -281,8 +303,8 @@ bool update_deadline;</declaration>
 			<target ref="id20"/>
 			<label kind="guard" x="-2150" y="-620">current_y &gt; 0 &amp;&amp; current_y != pic_position</label>
 			<label kind="synchronisation" x="-2150" y="-603">rcv_picture!</label>
-			<label kind="assignment" x="-2150" y="-586">old_y := current_y
-current_y := pic_position
+			<label kind="assignment" x="-2150" y="-586">old_y := current_y,
+current_y := pic_position,
 update_deadline := true</label>
 			<nail x="-2014" y="-527"/>
 			<nail x="-2175" y="-527"/>
@@ -304,19 +326,21 @@ update_deadline := true</label>
 		<transition>
 			<source ref="id21"/>
 			<target ref="id20"/>
-			<label kind="assignment" x="-2388" y="-314">old_y = -1
-current_y = -1
+			<label kind="assignment" x="-2388" y="-314">old_y = -1,
+current_y = -1,
 update_deadline := false</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
-Process = DataQueue();
+//pic_queue = DataQueue(pic_send, pic_rcv, 3);
+block = Block(take_pic, projectile_arrive, block_y_coord);
+
+
 // List one or more processes to be composed into a system.
-system ;
-    </system>
+system block;</system>
 	<queries>
 		<query>
-			<formula></formula>
+			<formula>E&lt;&gt; block.detection_area</formula>
 			<comment></comment>
 		</query>
 	</queries>
