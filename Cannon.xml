@@ -2,7 +2,7 @@
 <!DOCTYPE nta PUBLIC '-//Uppaal Team//DTD Flat System 1.1//EN' 'http://www.it.uu.se/research/group/darts/uppaal/flat-1_2.dtd'>
 <nta>
 	<declaration>// Place global declarations here.
-chan pic_send, pic_rcv, calc_send, calc_rcv;
+chan pic_send, pic_rcv, calc_send, calc_rcv, sleep_shoot, wake_shoot;
 chan sleep_detect, wake_detect;
 
 bool pic_data_full, calc_data_full;
@@ -92,37 +92,40 @@ full := false</label>
 		<name>SimpleDetectTask</name>
 		<parameter>chan &amp;sleep, chan &amp;wake, chan &amp;send_pic, bool &amp;dtq_full</parameter>
 		<declaration>clock sleep_timer;
-clock pix_timer;</declaration>
-		<location id="id4" x="-994" y="-93">
+clock pix_timer;
+clock process_time;</declaration>
+		<location id="id4" x="-1096" y="-93">
 			<urgent/>
 		</location>
-		<location id="id5" x="-994" y="-195">
-			<name x="-1062" y="-229">waiting</name>
+		<location id="id5" x="-1096" y="-195">
+			<name x="-1164" y="-229">waiting</name>
+			<label kind="invariant" x="-1249" y="-212">process_time &lt;= 114</label>
 		</location>
 		<location id="id6" x="-841" y="-195">
 			<name x="-851" y="-229">detect</name>
+		</location>
+		<location id="id7" x="-595" y="25">
+			<name x="-561" y="17">sleeping</name>
+		</location>
+		<location id="id8" x="-841" y="25">
+			<name x="-867" y="50">while</name>
 			<urgent/>
 		</location>
-		<location id="id7" x="-595" y="-17">
-			<name x="-561" y="-25">sleeping</name>
-		</location>
-		<location id="id8" x="-841" y="-17">
-			<name x="-867" y="8">while</name>
-			<urgent/>
-		</location>
-		<location id="id9" x="-1054" y="-17">
+		<location id="id9" x="-1156" y="25">
 		</location>
 		<init ref="id9"/>
 		<transition>
 			<source ref="id4"/>
 			<target ref="id8"/>
-			<label kind="synchronisation" x="-1062" y="-68">send_pic!</label>
-			<nail x="-994" y="-17"/>
+			<label kind="synchronisation" x="-1164" y="-26">send_pic!</label>
+			<label kind="assignment" x="-1215" y="-9">process_time := 0</label>
+			<nail x="-1096" y="25"/>
 		</transition>
 		<transition>
 			<source ref="id5"/>
 			<target ref="id4"/>
-			<label kind="synchronisation" x="-1045" y="-161">wake!</label>
+			<label kind="guard" x="-1096" y="-178">process_time &gt;= 114</label>
+			<label kind="synchronisation" x="-1147" y="-161">wake!</label>
 		</transition>
 		<transition>
 			<source ref="id6"/>
@@ -133,160 +136,269 @@ clock pix_timer;</declaration>
 		<transition>
 			<source ref="id6"/>
 			<target ref="id8"/>
-			<label kind="guard" x="-926" y="-144">!dtq_full</label>
-			<label kind="synchronisation" x="-926" y="-127">send_pic!</label>
-			<label kind="assignment" x="-926" y="-110">pix_timer := 0</label>
-			<nail x="-841" y="-110"/>
+			<label kind="guard" x="-1003" y="-110">!dtq_full &amp;&amp; process_time &gt;= 114</label>
+			<label kind="synchronisation" x="-1003" y="-93">send_pic!</label>
+			<label kind="assignment" x="-1003" y="-76">pix_timer := 0,
+process_time := 0</label>
+			<nail x="-841" y="-93"/>
 		</transition>
 		<transition>
 			<source ref="id8"/>
 			<target ref="id6"/>
-			<label kind="guard" x="-782" y="-161">pix_timer &gt; 15</label>
-			<nail x="-782" y="-110"/>
+			<label kind="guard" x="-773" y="-110">pix_timer &gt; 15999</label>
+			<nail x="-782" y="-85"/>
 		</transition>
 		<transition>
 			<source ref="id7"/>
 			<target ref="id8"/>
-			<label kind="guard" x="-680" y="34">sleep_timer &gt;= 2</label>
-			<label kind="synchronisation" x="-680" y="51">wake!</label>
-			<nail x="-722" y="42"/>
+			<label kind="guard" x="-680" y="76">sleep_timer &gt;= 2000</label>
+			<label kind="synchronisation" x="-680" y="93">wake!</label>
+			<nail x="-722" y="84"/>
 		</transition>
 		<transition>
 			<source ref="id8"/>
 			<target ref="id7"/>
-			<label kind="guard" x="-671" y="-102">pix_timer &lt; 15</label>
-			<label kind="synchronisation" x="-671" y="-85">sleep!</label>
-			<label kind="assignment" x="-671" y="-68">sleep_timer := 0</label>
-			<nail x="-722" y="-68"/>
+			<label kind="guard" x="-671" y="-60">pix_timer &lt; 16000</label>
+			<label kind="synchronisation" x="-671" y="-43">sleep!</label>
+			<label kind="assignment" x="-671" y="-26">sleep_timer := 0</label>
+			<nail x="-722" y="-26"/>
 		</transition>
 		<transition>
 			<source ref="id9"/>
 			<target ref="id8"/>
-			<label kind="assignment" x="-1028" y="-8">pix_timer := 0,
+			<label kind="assignment" x="-1130" y="34">pix_timer := 0,
 sleep_timer := 0</label>
 		</transition>
 	</template>
 	<template>
 		<name>SimpleCalcTask</name>
-		<parameter>chan &amp;calc_sleep, chan &amp;calc_wake, chan &amp;rcv_data, chan &amp;send_calc, bool &amp;dtq_full</parameter>
+		<parameter>chan &amp;calc_sleep, chan &amp;calc_wake, chan &amp;wake_shoot, chan &amp;sleep_shoot, chan &amp;rcv_data, chan &amp;send_calc, bool &amp;dtq_full</parameter>
 		<declaration>int old_y;
 int current_y;
-bool send_on_wake := false;</declaration>
-		<location id="id10" x="-1275" y="119">
-			<name x="-1368" y="85">await_send</name>
+bool send_on_wake := false;
+clock process_time;</declaration>
+		<location id="id10" x="-1470" y="-382">
+			<urgent/>
 		</location>
-		<location id="id11" x="-782" y="-170">
+		<location id="id11" x="-1105" y="-382">
+			<name x="-1165" y="-416">blocked</name>
+		</location>
+		<location id="id12" x="-1471" y="119">
+			<name x="-1564" y="85">await_send</name>
+		</location>
+		<location id="id13" x="-782" y="-170">
 			<name x="-765" y="-204">process2</name>
-			<urgent/>
 		</location>
-		<location id="id12" x="-960" y="-25">
+		<location id="id14" x="-960" y="-25">
 			<name x="-943" y="-51">process1</name>
+		</location>
+		<location id="id15" x="-960" y="-170">
 			<urgent/>
 		</location>
-		<location id="id13" x="-960" y="-170">
-			<urgent/>
+		<location id="id16" x="-1291" y="-170">
+			<name x="-1394" y="-204">wait_for_data</name>
 		</location>
-		<location id="id14" x="-1095" y="-170">
-			<name x="-1198" y="-204">wait_for_data</name>
+		<location id="id17" x="-1470" y="-170">
+			<name x="-1573" y="-204">sleep</name>
 		</location>
-		<location id="id15" x="-1274" y="-170">
-			<name x="-1377" y="-204">sleep</name>
+		<location id="id18" x="-1700" y="-170">
+			<name x="-1743" y="-204">begin</name>
 		</location>
-		<location id="id16" x="-1504" y="-170">
-			<name x="-1547" y="-204">begin</name>
-		</location>
-		<init ref="id16"/>
+		<init ref="id18"/>
 		<transition>
 			<source ref="id10"/>
-			<target ref="id15"/>
-			<label kind="synchronisation" x="-1232" y="-8">calc_sleep?</label>
-			<nail x="-1241" y="-34"/>
+			<target ref="id17"/>
+			<label kind="synchronisation" x="-1564" y="-348">sleep_shoot!</label>
 		</transition>
 		<transition>
 			<source ref="id11"/>
 			<target ref="id10"/>
+			<label kind="synchronisation" x="-1452" y="-399">calc_sleep?</label>
+		</transition>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id15"/>
+			<label kind="synchronisation" x="-1198" y="-144">rcv_data!</label>
+			<label kind="assignment" x="-1198" y="-161">process_time := 0</label>
+		</transition>
+		<transition>
+			<source ref="id16"/>
+			<target ref="id11"/>
+			<label kind="synchronisation" x="-1164" y="-314">wake_shoot!</label>
+		</transition>
+		<transition>
+			<source ref="id12"/>
+			<target ref="id17"/>
+			<label kind="synchronisation" x="-1428" y="-8">calc_sleep?</label>
+			<nail x="-1437" y="-34"/>
+		</transition>
+		<transition>
+			<source ref="id13"/>
+			<target ref="id12"/>
 			<label kind="guard" x="-748" y="-323">dtq_full</label>
 			<label kind="assignment" x="-748" y="-289">send_on_wake := true</label>
 			<nail x="-782" y="-263"/>
 			<nail x="-578" y="-263"/>
 			<nail x="-578" y="187"/>
-			<nail x="-1275" y="187"/>
+			<nail x="-1471" y="187"/>
 		</transition>
 		<transition>
-			<source ref="id10"/>
-			<target ref="id11"/>
-			<label kind="guard" x="-1113" y="127">!dtq_full</label>
+			<source ref="id12"/>
+			<target ref="id13"/>
+			<label kind="guard" x="-1309" y="127">!dtq_full</label>
 			<nail x="-697" y="119"/>
 			<nail x="-697" y="-170"/>
 		</transition>
 		<transition>
-			<source ref="id15"/>
-			<target ref="id10"/>
-			<label kind="guard" x="-1377" y="-34">send_on_wake</label>
-			<label kind="synchronisation" x="-1377" y="-17">calc_wake?</label>
-		</transition>
-		<transition>
-			<source ref="id11"/>
-			<target ref="id14"/>
-			<label kind="synchronisation" x="-935" y="59">send_calc!</label>
-			<label kind="assignment" x="-935" y="76">send_on_wake := false</label>
-			<nail x="-782" y="51"/>
-			<nail x="-1096" y="51"/>
+			<source ref="id17"/>
+			<target ref="id12"/>
+			<label kind="guard" x="-1573" y="-34">send_on_wake</label>
+			<label kind="synchronisation" x="-1573" y="-17">calc_wake?</label>
 		</transition>
 		<transition>
 			<source ref="id13"/>
-			<target ref="id11"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-935" y="51">process_time &gt;= 177</label>
+			<label kind="synchronisation" x="-935" y="68">send_calc!</label>
+			<label kind="assignment" x="-935" y="85">send_on_wake := false</label>
+			<nail x="-783" y="51"/>
+			<nail x="-1293" y="51"/>
+		</transition>
+		<transition>
+			<source ref="id15"/>
+			<target ref="id13"/>
 			<label kind="guard" x="-935" y="-238">current_y != -1</label>
 			<label kind="assignment" x="-935" y="-221">old_y := current_y,
 current_y++</label>
 		</transition>
 		<transition>
-			<source ref="id14"/>
-			<target ref="id15"/>
-			<label kind="synchronisation" x="-1257" y="-306">calc_sleep?</label>
-			<nail x="-1096" y="-289"/>
-			<nail x="-1275" y="-289"/>
-		</transition>
-		<transition>
-			<source ref="id12"/>
-			<target ref="id14"/>
-			<nail x="-1096" y="-25"/>
-		</transition>
-		<transition>
-			<source ref="id13"/>
-			<target ref="id12"/>
-			<label kind="guard" x="-943" y="-119">current_y == -1</label>
-			<label kind="assignment" x="-943" y="-85">current_y := 1</label>
+			<source ref="id16"/>
+			<target ref="id17"/>
+			<label kind="synchronisation" x="-1453" y="-306">calc_sleep?</label>
+			<nail x="-1292" y="-289"/>
+			<nail x="-1471" y="-289"/>
 		</transition>
 		<transition>
 			<source ref="id14"/>
-			<target ref="id13"/>
-			<label kind="synchronisation" x="-1062" y="-161">rcv_data!</label>
+			<target ref="id16"/>
+			<label kind="guard" x="-1258" y="-8">process_time &gt;= 177</label>
+			<nail x="-1292" y="-25"/>
 		</transition>
 		<transition>
 			<source ref="id15"/>
 			<target ref="id14"/>
-			<label kind="guard" x="-1224" y="-153">!send_on_wake</label>
-			<label kind="synchronisation" x="-1224" y="-136">calc_wake?</label>
+			<label kind="guard" x="-943" y="-119">current_y == -1</label>
+			<label kind="assignment" x="-943" y="-85">current_y := 1</label>
 		</transition>
 		<transition>
-			<source ref="id16"/>
-			<target ref="id15"/>
-			<label kind="assignment" x="-1478" y="-162">old_y := -1,
+			<source ref="id17"/>
+			<target ref="id16"/>
+			<label kind="guard" x="-1420" y="-153">!send_on_wake</label>
+			<label kind="synchronisation" x="-1420" y="-136">calc_wake?</label>
+		</transition>
+		<transition>
+			<source ref="id18"/>
+			<target ref="id17"/>
+			<label kind="assignment" x="-1674" y="-162">old_y := -1,
 current_y := -1</label>
+		</transition>
+	</template>
+	<template>
+		<name>SimpleShootTask</name>
+		<parameter>chan &amp;rcv_data, chan &amp;sleep_shoot, chan &amp;wake_shoot</parameter>
+		<declaration>clock process_time;
+clock sleep_timeout;
+bool wake_in_process;</declaration>
+		<location id="id19" x="-1139" y="-204">
+			<name x="-1241" y="-187">wait_for_data</name>
+			<label kind="invariant" x="-1292" y="-170">sleep_timeout &lt;= 2000</label>
+		</location>
+		<location id="id20" x="-1360" y="-204">
+			<name x="-1428" y="-246">blocked</name>
+		</location>
+		<location id="id21" x="-1572" y="-204">
+			<name x="-1640" y="-238">begin</name>
+		</location>
+		<location id="id22" x="-833" y="-204">
+			<name x="-833" y="-238">processing</name>
+		</location>
+		<init ref="id21"/>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id20"/>
+			<label kind="synchronisation" x="-1181" y="-450">sleep_shoot?</label>
+			<nail x="-833" y="-416"/>
+			<nail x="-1360" y="-416"/>
+		</transition>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id22"/>
+			<label kind="guard" x="-1147" y="144">wake_in_process</label>
+			<label kind="synchronisation" x="-1147" y="161">wake_shoot?</label>
+			<nail x="-1360" y="187"/>
+			<nail x="-629" y="187"/>
+			<nail x="-629" y="-204"/>
+		</transition>
+		<transition>
+			<source ref="id19"/>
+			<target ref="id20"/>
+			<label kind="synchronisation" x="-1342" y="-323">sleep_shoot?</label>
+			<nail x="-1139" y="-306"/>
+			<nail x="-1360" y="-306"/>
+		</transition>
+		<transition>
+			<source ref="id22"/>
+			<target ref="id19"/>
+			<label kind="guard" x="-1113" y="0">process_time &gt;= 155</label>
+			<label kind="assignment" x="-1113" y="17">sleep_timeout := 0,
+wake_in_process := false</label>
+			<nail x="-833" y="-8"/>
+			<nail x="-1139" y="-8"/>
+		</transition>
+		<transition>
+			<source ref="id19"/>
+			<target ref="id22"/>
+			<label kind="guard" x="-1121" y="-238">sleep_timeout &gt; 2000</label>
+			<label kind="assignment" x="-1105" y="-178">process_time := 0,
+wake_in_process := true</label>
+		</transition>
+		<transition>
+			<source ref="id19"/>
+			<target ref="id22"/>
+			<label kind="synchronisation" x="-1079" y="-331">rcv_data!</label>
+			<label kind="assignment" x="-1079" y="-314">process_time := 0,
+wake_in_process := true</label>
+			<nail x="-994" y="-272"/>
+		</transition>
+		<transition>
+			<source ref="id20"/>
+			<target ref="id19"/>
+			<label kind="guard" x="-1309" y="-272">!wake_in_process</label>
+			<label kind="synchronisation" x="-1309" y="-255">wake_shoot?</label>
+			<label kind="assignment" x="-1309" y="-238">sleep_timeout := 0</label>
+		</transition>
+		<transition>
+			<source ref="id21"/>
+			<target ref="id20"/>
+			<label kind="assignment" x="-1554" y="-204">wake_in_process := false</label>
 		</transition>
 	</template>
 	<system>// Place template instantiations here.
 pic_queue = DataQueue(pic_send, pic_rcv, 3, pic_data_full);
 calc_queue = DataQueue(calc_send, calc_rcv, 2, calc_data_full);
 detection = SimpleDetectTask(sleep_detect, wake_detect, pic_send, pic_data_full);
-calc = SimpleCalcTask(wake_detect, sleep_detect, pic_rcv, calc_send, calc_data_full);
+calc = SimpleCalcTask(wake_detect, sleep_detect, wake_shoot, sleep_shoot, pic_rcv, calc_send, calc_data_full);
+shoot = SimpleShootTask(pic_rcv, sleep_shoot, wake_shoot);
 
 // List one or more processes to be composed into a system.
-system detection, pic_queue, calc_queue, calc;</system>
+system detection, pic_queue, calc_queue, calc, shoot;</system>
 	<queries>
 		<query>
-			<formula>E&lt;&gt; calc.send_on_wake &amp;&amp; detection.while</formula>
+			<formula>E&lt;&gt; (calc.process_time &gt; 16001) </formula>
+			<comment></comment>
+		</query>
+		<query>
+			<formula>E&lt;&gt; (calc.process_time &gt; 177 || detection.process_time &gt; 114 || shoot.process_time &gt; 155)</formula>
 			<comment></comment>
 		</query>
 	</queries>
